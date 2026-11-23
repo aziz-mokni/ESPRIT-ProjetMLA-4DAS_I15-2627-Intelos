@@ -38,3 +38,21 @@ def test_fetch_uci_uses_original_for_bupa(tmp_path, monkeypatch):
     out = pd.read_csv(cache)
     assert list(out.columns) == ["mcv", "drinks", "__target__"]
     assert out["__target__"].tolist() == [1, 2, 1]
+
+
+def test_registry_covers_the_16_datasets_of_the_article():
+    ids = sorted(int(k.split("_")[0][1:]) for k in REGISTRY)
+    assert ids == list(range(1, 17))
+    for k, v in REGISTRY.items():
+        assert "note" in v and "article" in v, k
+        if v.get("task") != "multiclass":
+            assert callable(v["positive"]), k
+
+
+def test_multiclass_loader_and_drop_cols(tmp_path, monkeypatch):
+    from ensemble_disease import data as D
+    monkeypatch.setattr(D, "RAW", tmp_path)
+    pd.DataFrame({"lesion_id": ["a", "b", "c"], "image_id": ["x", "y", "z"], "dx": ["nv", "mel", "bkl"],
+                  "age": [30, 40, 50]}).to_csv(tmp_path / "D15_ham10000.csv", index=False)
+    X, y = D.load_dataset("D15_ham10000")
+    assert list(X.columns) == ["age"] and sorted(y.unique()) == [0, 1, 2]

@@ -8,6 +8,12 @@
 The positive class (y = 1) is ALWAYS the *disease* class and is defined explicitly
 per dataset below, so that precision / recall / F1 are meaningful later.
 Items marked VERIFY must be confirmed in the EDA notebook.
+
+The registry covers the 16 datasets (D1..D16) of Table 2 of the reference article
+(Mahajan et al., 2024). D2 and D12 are loaded from their UCI versions (same patients as the
+Kaggle files of the article). D15 (HAM10000) is multiclass and D16 is multiclass in the article
+(binarised here for the binary protocol): `task="multiclass"` datasets are skipped by the binary
+pipeline until multiclass metrics are implemented.
 """
 from __future__ import annotations
 import pandas as pd
@@ -25,41 +31,77 @@ def _s(y: pd.Series) -> pd.Series:
 REGISTRY = {
     # name: source, uci_id / csv name, target column (case-insensitive), positive rule, note
     "D2_heart_cleveland": dict(
-        source="uci", uci_id=45, target="num",
+        source="uci", uci_id=45, target="num", article=dict(n=303, n_features=13, pos=165, neg=138),
         positive=lambda y: pd.to_numeric(y, errors="coerce") > 0,
         note="num 0 = healthy, 1..4 = disease  ->  disease = num > 0"),
     "D5_liver_disorders": dict(
         source="uci", uci_id=60, target="selector", extra_features=["drinks"],
+        article=dict(n=345, n_features=7, pos=200, neg=145),
         positive=lambda y: pd.to_numeric(y, errors="coerce") == 1,
         note="VERIFY: label = 'selector' (1: 145, 2: 200), 'drinks' kept as a feature. Selector is a train/test split flag in UCI, not a clean diagnosis"),
     "D6_ilpd": dict(
-        source="uci", uci_id=225, target="selector",
+        source="uci", uci_id=225, target="selector", article=dict(n=583, n_features=10, pos=167, neg=416),
         positive=lambda y: pd.to_numeric(y, errors="coerce") == 1,
         note="Selector 1 = liver patient (416), 2 = non-patient (167)"),
     "D8_early_diabetes": dict(
-        source="uci", uci_id=529, target="class",
+        source="uci", uci_id=529, target="class", article=dict(n=520, n_features=16, pos=320, neg=200),
         positive=lambda y: _s(y) == "positive",
         note="class Positive / Negative"),
     "D11_debrecen": dict(
-        source="uci", uci_id=329, target="class",
+        source="uci", uci_id=329, target="class", article=dict(n=1151, n_features=18, pos=611, neg=540),
         positive=lambda y: pd.to_numeric(y, errors="coerce") == 1,
         note="Class 1 = signs of diabetic retinopathy"),
     "D12_ckd": dict(
-        source="uci", uci_id=336, target="class",
+        source="uci", uci_id=336, target="class", article=dict(n=400, n_features=25, pos=150, neg=250),
         positive=lambda y: _s(y) == "ckd",
         note="class ckd / notckd (raw file has stray tabs/spaces)"),
     "D16_dermatology": dict(
-        source="uci", uci_id=33, target="class",
+        source="uci", uci_id=33, target="class", article=dict(n=366, n_features=35),
         positive=lambda y: pd.to_numeric(y, errors="coerce") == 1,
         note="VERIFY: 6 classes. Binarised as psoriasis (class 1) vs rest; decide multiclass vs binary"),
     "D4_heart_failure": dict(
-        source="csv", target="DEATH_EVENT",
+        source="csv", target="DEATH_EVENT", article=dict(n=299, n_features=12, pos=96, neg=203),
         positive=lambda y: pd.to_numeric(y, errors="coerce") == 1,
         note="Kaggle: heart_failure_clinical_records_dataset.csv ; DEATH_EVENT 1 = died"),
     "D10_diabetes_2019": dict(
-        source="csv", target="Diabetic",
+        source="csv", target="Diabetic", article=dict(n=952, n_features=17, pos=267, neg=685),
         positive=lambda y: _s(y) == "yes",
         note="VERIFY: Kaggle diabetes 2019 file; column name and yes/no spelling"),
+    # ---- Kaggle datasets of Table 2 (CSV to be placed by hand in data/raw/<name>.csv) ----
+    "D1_heart_comprehensive": dict(
+        source="csv", target="target",
+        positive=lambda y: pd.to_numeric(y, errors="coerce") == 1,
+        article=dict(n=1190, n_features=11, pos=629, neg=561),
+        note="VERIFY: Kaggle 'Heart Disease Dataset (Comprehensive)', 1190 rows; target 1 = heart disease"),
+    "D3_heart_disease": dict(
+        source="csv", target="target",
+        positive=lambda y: pd.to_numeric(y, errors="coerce") == 1,
+        article=dict(n=1025, n_features=13, pos=526, neg=499),
+        note="VERIFY: Kaggle johnsmith88/heart-disease-dataset (heart.csv), 1025 rows; many duplicate rows expected"),
+    "D7_covid_liver_cancer": dict(
+        source="csv", target="Result",
+        positive=lambda y: pd.to_numeric(y, errors="coerce") == 1,
+        article=dict(n=450, n_features=25, pos=310, neg=140),
+        note="VERIFY: Kaggle fedesoriano 'COVID-19 effect on liver cancer prediction'; target column 'Result'"),
+    "D9_diabetes_pima": dict(
+        source="csv", target="Outcome",
+        positive=lambda y: pd.to_numeric(y, errors="coerce") == 1,
+        article=dict(n=768, n_features=7, pos=268, neg=500),
+        note="VERIFY: Kaggle abdallamahgoub/diabetes (Pima, 768 rows); Outcome 1 = diabetes"),
+    "D13_ckd_kaggle": dict(
+        source="csv", target="Class",
+        positive=lambda y: pd.to_numeric(y, errors="coerce") == 1,
+        article=dict(n=400, n_features=13, pos=250, neg=150),
+        note="VERIFY: Kaggle abhia1999/chronic-kidney-disease; Class 1 expected = ckd (250 rows)"),
+    "D14_kidney_stone": dict(
+        source="csv", target="target",
+        positive=lambda y: pd.to_numeric(y, errors="coerce") == 1,
+        article=dict(n=90, n_features=7, pos=45, neg=45),
+        note="VERIFY: Kaggle harshghadiya/kidneystone (urine analysis); very small"),
+    "D15_ham10000": dict(
+        source="csv", task="multiclass", target="dx", drop_cols=["lesion_id", "image_id"],
+        article=dict(n=10015, n_features=6),
+        note="Kaggle kmader/skin-cancer-mnist-ham10000, HAM10000_metadata.csv; 7 classes (dx); identifier columns dropped"),
 }
 
 
@@ -130,9 +172,16 @@ def load_dataset(name: str):
     if tname is None or tname not in df.columns:
         raise KeyError(f"Target column '{spec['target']}' not in {cache.name}: {list(df.columns)}")
     y_raw = df.pop(tname)
+    for c in spec.get("drop_cols", []):          # identifiers that must not be used as features
+        k = _find_col(df.columns, c)
+        if k is not None:
+            df = df.drop(columns=[k])
     mask = y_raw.notna()                       # rows with no label are unusable
     df, y_raw = df[mask], y_raw[mask]
-    y = spec["positive"](y_raw).astype(int)
+    if spec.get("task") == "multiclass":       # class codes 0..K-1 in sorted label order
+        y = pd.Series(pd.factorize(y_raw.astype(str).str.strip(), sort=True)[0], index=y_raw.index)
+    else:
+        y = spec["positive"](y_raw).astype(int)
     X = clean_frame(df).reset_index(drop=True)
     return X, y.reset_index(drop=True)
 

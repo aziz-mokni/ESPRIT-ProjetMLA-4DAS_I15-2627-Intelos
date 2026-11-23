@@ -20,10 +20,14 @@ RESULTS = ROOT / "results"
 
 
 # ----------------------------------------------------------------------------- loading
-def load_all(names=None):
-    """Load every dataset that is available. Returns (data, errors)."""
+def load_all(names=None, binary_only=True):
+    """Load every dataset that is available. Returns (data, errors).
+    Multiclass datasets are skipped when binary_only=True (the binary pipeline cannot use them yet)."""
     data, errors = {}, {}
     for name in (names or list(REGISTRY)):
+        if binary_only and REGISTRY[name].get("task") == "multiclass":
+            errors[name] = "skipped: multiclass dataset (binary pipeline only)"
+            continue
         try:
             data[name] = load_dataset(name)
         except Exception as e:  # keep going: one missing file must not stop the EDA
